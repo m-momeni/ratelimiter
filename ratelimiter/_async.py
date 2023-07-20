@@ -19,7 +19,7 @@ class AsyncRateLimiter(RateLimiter):
         if self._alock is None:
             self._init_async_lock()
 
-        with await self._alock:
+        async with self._alock:
             # We want to ensure that no more than max_calls were run in the allowed
             # period. For this, we store the last timestamps of each call and run
             # the rate verification upon each __enter__ call.
@@ -35,4 +35,5 @@ class AsyncRateLimiter(RateLimiter):
                     await asyncio.sleep(sleeptime)
             return self
 
-    __aexit__ = asyncio.coroutine(RateLimiter.__exit__)
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        return super(AsyncRateLimiter, self).__exit__(exc_type, exc_value, traceback)
