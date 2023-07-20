@@ -7,7 +7,6 @@ import collections
 
 
 class RateLimiter(object):
-
     """Provides rate limiting for an operation with a configurable number of
     requests for a time period.
     """
@@ -23,7 +22,7 @@ class RateLimiter(object):
 
         # We're using a deque to store the last execution timestamps, not for
         # its maxlen attribute, but to allow constant time front removal.
-        self.calls = collections.deque()
+        self.calls = collections.deque(maxlen=max_calls)
 
         self.period = period
         self.max_calls = max_calls
@@ -38,10 +37,12 @@ class RateLimiter(object):
         """The __call__ function allows the RateLimiter object to be used as a
         regular function decorator.
         """
+
         @functools.wraps(f)
         def wrapped(*args, **kwargs):
             with self:
                 return f(*args, **kwargs)
+
         return wrapped
 
     def __enter__(self):
@@ -49,14 +50,18 @@ class RateLimiter(object):
             # We want to ensure that no more than max_calls were run in the allowed
             # period. For this, we store the last timestamps of each call and run
             # the rate verification upon each __enter__ call.
-            if len(self.calls) >= self.max_calls:
-                until = time.time() + self.period - self._timespan
-                if self.callback:
-                    t = threading.Thread(target=self.callback, args=(until,))
-                    t.daemon = True
-                    t.start()
+            if len(self.calls) == self.max_calls:
+                until = self.period + self.calls[0]
                 sleeptime = until - time.time()
+
+                print('sleeptime', sleeptime, self.calls[0])
+
                 if sleeptime > 0:
+                    if self.callback:
+                        t = threading.Thread(target=self.callback, args=(until,))
+                        t.daemon = True
+                        t.start()
+
                     time.sleep(sleeptime)
             return self
 
