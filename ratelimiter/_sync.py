@@ -11,7 +11,7 @@ class RateLimiter(object):
     requests for a time period.
     """
 
-    def __init__(self, max_calls, period=1.0, callback=None):
+    def __init__(self, max_calls, period=1.0, callback=None, blocking=True):
         """Initialize a RateLimiter object which enforces as much as max_calls
         operations on period (eventually floating) number of seconds.
         """
@@ -27,6 +27,7 @@ class RateLimiter(object):
         self.period = period
         self.max_calls = max_calls
         self.callback = callback
+        self.blocking = blocking
         self._lock = threading.Lock()
         self._alock = None
 
@@ -54,13 +55,16 @@ class RateLimiter(object):
                 until = self.period + self.calls[0]
                 sleeptime = until - time.time()
 
-                print('sleeptime', sleeptime, self.calls[0])
+                print(('sleeptime', 'ignoretime')[self.blocking], sleeptime, self.calls[0])
 
                 if sleeptime > 0:
                     if self.callback:
                         t = threading.Thread(target=self.callback, args=(until,))
                         t.daemon = True
                         t.start()
+
+                    if not self.blocking:
+                        return None
 
                     time.sleep(sleeptime)
             return self

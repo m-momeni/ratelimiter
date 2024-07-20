@@ -32,6 +32,9 @@ class AsyncRateLimiter(RateLimiter):
                     if self.callback:
                         asyncio.ensure_future(self.callback(until))
 
+                    if not self.blocking:
+                        return None
+
                     await asyncio.sleep(sleeptime)
             return self
 
